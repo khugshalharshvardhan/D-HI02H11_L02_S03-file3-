@@ -206,3 +206,18 @@ Replaced clips: `../_backup_draft1/pre_vo_round2_2026-10-27/`.
 ## 2026-10-27 — new buffalo image
 
 - `assets/Images/obj_bhains.webp` replaced with the new buffalo art (`_backup_s01based/.../Images/buffalo.png`): faint edge pixels cleared, cropped to the outline, 800x642 webp. Old image in `_backup_draft1/replaced_images_2026-10-27/`.
+
+## 2026-11-02 — QA BUG_02: speaker during the page 14-16 hand nudge
+
+- `4_ENGINE/train_modules.js` SENTENCE_COMPLETE: once rung 3 has locked the wrong cards and the hand is on the answer, the speaker (and idle reminder) plays the page's rung-3 line (`vo_p3_h3` / `vo_p4_h3` / `vo_p5_h3`) instead of `vo_sc_prompt`. Same rule as pages 8-10. Before the nudge the speaker is unchanged. Verified muted on all three pages.
+
+## 2026-11-09 — QA BUG_04 and BUG_05
+
+- **BUG_04 (pages 6, 7, 11, 13):** `4_ENGINE/lesson_template.html` `_zoneAt()` skips any drop zone inside a greyed-out coach (`.is-off`, set by rung 3). After the 3rd wrong drop the wrong coach no longer lights up under the card and does not take the drop; the card glides back to the tray (no shake, not counted). The correct coach still takes it.
+- **BUG_05 (pages 14-16):** new per-slide hook `state.idleReplay` (reset in mountSlide; the 7 s reminder calls it first). SENTENCE_COMPLETE sets it so that during the rung-3 hand nudge the reminder re-shows the hand with no voice line. Before rung 3 the reminder still speaks the prompt; the speaker still plays the rung-3 line (BUG_02).
+- Verified muted: targeted tests on all affected pages + full mechanics playthrough (exit 0).
+
+## 2026-11-09 — QA BUG_03: speaker tapped while the train is arriving
+
+- `4_ENGINE/lesson_template.html` cover: the सुनो speaker ignores taps until the train has arrived (`window.__ltReady`). Before, a tap during the arrival started the greeting and the queued greeting started it again on arrival (measured on the old build: `vo_landing` twice). The speaker's look is unchanged; a tap after the arrival still replays at once. Verified muted.
+- The same fixes (BUG_02, 03, 04, 05) were ported to file 4 (S05).
