@@ -2758,7 +2758,7 @@ body.is-start .phase-gate{
    coach's own slice, so the glow lands on `.coach-body` and the shake on the whole coach. */
 .train-coach.is-tappable{ cursor:pointer; }
 .train-coach.is-tappable .coach-body{ transition:transform .14s ease, filter .16s ease; }
-.train-coach.is-tappable:hover .coach-body{ transform:translateY(-3px); }
+.train-coach.is-tappable:not(.is-off):hover .coach-body{ transform:translateY(-3px); }
 
 /* ---------- [r19] HOVER AND PRESS ----------
    Yasir: "when we hover over the cart it should glow with slight golden color, and when we tap on
@@ -2774,12 +2774,14 @@ body.is-start .phase-gate{
    light on it. Gold is kept deliberately thinner than the nudge's, so "slight" stays slight and
    the two never compete. */
 @media (hover:hover) and (pointer:fine){
-  .train-coach.is-tappable:not(.is-out):not(.is-nudge):not(.is-correct):not(.is-shake):hover .coach-body{
+  /* [QA BUG_04 follow-up] never on a coach greyed out by rung 3 (.is-off): the gold used to outrank its
+     grey, so the dead coach lit up under the cursor and went grey again when the cursor left */
+  .train-coach.is-tappable:not(.is-off):not(.is-out):not(.is-nudge):not(.is-correct):not(.is-shake):hover .coach-body{
     filter:drop-shadow(0 0 2px rgba(255,206,46,.50)) drop-shadow(0 0 10px rgba(255,190,40,.48));
   }
   /* the sort screens' coaches are drop targets, not tap targets, but they are the same carts and
      answer to the same hover */
-  .train-coach:not(.is-nudge):not(.is-correct) .coach-body.dd-zone:not(.filled):hover{
+  .train-coach:not(.is-off):not(.is-nudge):not(.is-correct) .coach-body.dd-zone:not(.filled):hover{
     filter:drop-shadow(0 0 2px rgba(255,206,46,.50)) drop-shadow(0 0 10px rgba(255,190,40,.48));
   }
 }
@@ -6365,6 +6367,7 @@ function makeDraggable(tileEl, onDrop, opts){
     const p = e.touches ? e.touches[0] : e;
     startX = p.clientX; startY = p.clientY;
     dx = 0; dy = 0;
+    _home = tileEl.getBoundingClientRect();      /* [S03 QA BUG_04] measured before the lift transform */
     tileEl.classList.add("dragging");
     /* [r26] THE HAND STEPS ASIDE THE MOMENT THE CHILD ACTS.
        Yasir: "when we try to drag element then remove hand nudge animation after 2 incorrect
@@ -6375,10 +6378,31 @@ function makeDraggable(tileEl, onDrop, opts){
     if(opts && opts.onPick) opts.onPick();   // e.g. show a nudge at the slot this tile belongs in
     e.preventDefault();
   }
+  /* [S03 QA BUG_04, pages 6/7/11/13] A CARD LOCKED BY RUNG 3 CANNOT BE CARRIED INTO A GREYED COACH.
+     QA: "user should not be able to drag in the wrong container after all chances are exhausted".
+     Refusing the drop was not enough - the card still travelled over the greyed coach. A card with
+     `data-only` (rung 3 has named its coach) now meets the greyed coaches as a wall: a move that
+     would put it over one is not taken (it slides along the edge instead), so it can only go home
+     or to its own coach. Every other card drags exactly as before. */
+  let _home = null;
+  const _hitsOff = (ndx, ndy)=>{
+    if(!_home) return false;
+    const L = _home.left + ndx * scale, T = _home.top + ndy * scale,
+          R = L + _home.width, B = T + _home.height;
+    return [...document.querySelectorAll(".is-off")].some(o => {
+      const r = o.getBoundingClientRect();
+      return r.width && L < r.right && R > r.left && T < r.bottom && B > r.top; });
+  };
   function onMove(e){
     if(!dragging) return;
     const p = e.touches ? e.touches[0] : e;
-    dx = (p.clientX - startX) / scale; dy = (p.clientY - startY) / scale;
+    let ndx = (p.clientX - startX) / scale, ndy = (p.clientY - startY) / scale;
+    if(tileEl.dataset.only != null && _hitsOff(ndx, ndy)){
+      if(!_hitsOff(ndx, dy)) ndy = dy;            /* slide along the wall horizontally */
+      else if(!_hitsOff(dx, ndy)) ndx = dx;       /* ...or vertically */
+      else { ndx = dx; ndy = dy; }                /* or stay put */
+    }
+    dx = ndx; dy = ndy;
     tileEl.style.transform = `translate(${dx}px,${dy}px) scale(1.08)`;
     // highlight zone under — hide the tile from hit-testing so the dragged tile
     // (z-index 50, now covering the zone) doesn't mask the zone beneath it.
@@ -18710,10 +18734,16 @@ function boot(){
      RETURN: a greeting that reports back in under 600ms never sounded, because a refused clip
      comes back at once and a real 5s one cannot. Only a clip that actually ran counts. */
   let _landingPlayedOk = false;
+  /* [S03 QA BUG_01] the play button is held back for the FIRST greeting only (r103). Once it has
+     appeared, a replay from the speaker leaves it on screen and pressable - शुरू करें stops the
+     greeting itself (stopAudio in its handler), so pressing it mid-replay is safe. */
+  let _startBtnShown = false;
   const _speakLanding = ()=>{ if(!_onLandingNow()) return;
     const _t0 = Date.now();
-    setStartBtnReady(false); disarmStartNudge();
+    if(!_startBtnShown) setStartBtnReady(false);
+    disarmStartNudge();
     play(landSrc, ()=>{ if(Date.now() - _t0 > 600) _landingPlayedOk = true;
+                        _startBtnShown = true;
                         setStartBtnReady(true); armStartNudge(); }); };
   const playLanding = (immediate)=>{
     if(!_onLandingNow()) return;

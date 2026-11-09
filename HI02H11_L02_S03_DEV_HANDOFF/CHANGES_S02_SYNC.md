@@ -221,3 +221,13 @@ Replaced clips: `../_backup_draft1/pre_vo_round2_2026-10-27/`.
 
 - `4_ENGINE/lesson_template.html` cover: the सुनो speaker ignores taps until the train has arrived (`window.__ltReady`). Before, a tap during the arrival started the greeting and the queued greeting started it again on arrival (measured on the old build: `vo_landing` twice). The speaker's look is unchanged; a tap after the arrival still replays at once. Verified muted.
 - The same fixes (BUG_02, 03, 04, 05) were ported to file 4 (S05).
+
+
+## 2026-11-09 — QA BUG_01: start-screen speaker and play button
+
+- **Speaker colour unchanged (reverted):** the start-screen speaker still greys out while a voice line plays, as before (Yasir r73). A first version kept it blue; the user asked to keep the grey, so that CSS was removed. Only the play-button change below remains.
+- **Play button stays on replay:** `4_ENGINE/lesson_template.html` `_speakLanding` — the play button is held back for the first greeting only. Once it has appeared, replaying the greeting from the speaker leaves it on screen and pressable (pressing it stops the greeting and starts the lesson).
+- Verified muted, plus BUG_03 regression and full mechanics playthrough.
+
+- **BUG_04 follow-up (card can no longer be carried over the greyed coach):** `4_ENGINE/lesson_template.html` `makeDraggable` - after the 3rd wrong drop, the locked card (`data-only`) meets the greyed coaches as a wall: it stops at their edge (slides along it) and cannot be dragged into them at all. It can still go home or to its own coach. Other cards drag as before. Verified muted on all four sort screens (overlap with the greyed coach = 0) + full playthrough.
+- **BUG_04 follow-up (greyed coach lit up under the cursor):** `4_ENGINE/train_styles.css` - the gold hover glow on coaches outranked the grey of a coach greyed out by rung 3 (`.is-off`), so on pages 6/7/11/13 the dead coach lit up when the cursor was over it and went grey again when it left. Both hover-glow rules (and the tap pages hover lift) now skip `.is-off` coaches; a greyed coach stays grey at rest, under the cursor, while a card is dragged at it, and after release. Verified muted on all four sort screens.

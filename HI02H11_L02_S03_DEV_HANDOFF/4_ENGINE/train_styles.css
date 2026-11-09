@@ -658,7 +658,7 @@
    coach's own slice, so the glow lands on `.coach-body` and the shake on the whole coach. */
 .train-coach.is-tappable{ cursor:pointer; }
 .train-coach.is-tappable .coach-body{ transition:transform .14s ease, filter .16s ease; }
-.train-coach.is-tappable:hover .coach-body{ transform:translateY(-3px); }
+.train-coach.is-tappable:not(.is-off):hover .coach-body{ transform:translateY(-3px); }
 
 /* ---------- [r19] HOVER AND PRESS ----------
    Yasir: "when we hover over the cart it should glow with slight golden color, and when we tap on
@@ -674,12 +674,14 @@
    light on it. Gold is kept deliberately thinner than the nudge's, so "slight" stays slight and
    the two never compete. */
 @media (hover:hover) and (pointer:fine){
-  .train-coach.is-tappable:not(.is-out):not(.is-nudge):not(.is-correct):not(.is-shake):hover .coach-body{
+  /* [QA BUG_04 follow-up] never on a coach greyed out by rung 3 (.is-off): the gold used to outrank its
+     grey, so the dead coach lit up under the cursor and went grey again when the cursor left */
+  .train-coach.is-tappable:not(.is-off):not(.is-out):not(.is-nudge):not(.is-correct):not(.is-shake):hover .coach-body{
     filter:drop-shadow(0 0 2px rgba(255,206,46,.50)) drop-shadow(0 0 10px rgba(255,190,40,.48));
   }
   /* the sort screens' coaches are drop targets, not tap targets, but they are the same carts and
      answer to the same hover */
-  .train-coach:not(.is-nudge):not(.is-correct) .coach-body.dd-zone:not(.filled):hover{
+  .train-coach:not(.is-off):not(.is-nudge):not(.is-correct) .coach-body.dd-zone:not(.filled):hover{
     filter:drop-shadow(0 0 2px rgba(255,206,46,.50)) drop-shadow(0 0 10px rgba(255,190,40,.48));
   }
 }
